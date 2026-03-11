@@ -1,12 +1,7 @@
 {
   "version": 2,
-  "functions": {
-    "api/server.js": {
-      "includeFiles": "dist/**"
-    }
-  },
-  "rewrites": [
-    { "source": "/api/test", "destination": "/api/test.js" },
-    { "source": "/(.*)", "destination": "/api/server.js" }
+  "routes": [
+    { "src": "/api/test", "dest": "/api/test.js" },
+    { "src": "/(.*)", "dest": "/api/server.js" }
   ]
 }
