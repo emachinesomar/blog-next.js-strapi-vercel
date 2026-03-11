@@ -23,7 +23,10 @@ const config: Core.Config.Middlewares = [
     config: {
       origin: [
         'http://localhost:3000',
+        'http://localhost:1337',
+        'https://blog-next-js-strapi-vercel.vercel.app',
         process.env.FRONTEND_URL || 'http://localhost:3000',
+        process.env.PUBLIC_URL || 'http://localhost:1337',
       ],
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'],
       headers: ['Content-Type', 'Authorization', 'Origin', 'Accept'],
