@@ -9,11 +9,6 @@ const createStrapi = strapiPkg.createStrapi || (strapiPkg.default && strapiPkg.d
 module.exports = async (req, res) => {
   console.log('Method:', req.method, 'URL:', req.url);
   
-  // Diagnostic response for root route
-  if (req.url === '/' || req.url === '/test-root') {
-    return res.status(200).send("Hello from Strapi Bridge!");
-  }
-
   try {
     if (!global.strapi) {
       console.log('Initializing Strapi 5...');
