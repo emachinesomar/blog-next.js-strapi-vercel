@@ -1,29 +1,35 @@
 const path = require('path');
 const strapiPkg = require('@strapi/strapi');
 
-// In Strapi 5, the initialization function might be a named export 'createStrapi'
-// or the default export, or the package itself in older/different builds.
+console.log('--- Vercel Request Received ---');
+console.log('Path:', path.join(__dirname));
+
 const createStrapi = strapiPkg.createStrapi || (strapiPkg.default && strapiPkg.default.createStrapi) || (typeof strapiPkg === 'function' ? strapiPkg : null);
 
 module.exports = async (req, res) => {
+  console.log('Method:', req.method, 'URL:', req.url);
   try {
     if (!global.strapi) {
-      console.log('Starting Strapi 5...');
+      console.log('Initializing Strapi 5...');
       
       if (!createStrapi) {
         throw new Error(`Could not find a valid Strapi initialization function. Available keys: ${Object.keys(strapiPkg).join(', ')}`);
       }
 
-      const appDir = path.join(__dirname, '..');
+      // Vercel root directory is assumed to be 'backend'
+      const appDir = process.cwd(); 
+      console.log('AppDir:', appDir);
+      
       global.strapi = await createStrapi({ appDir }).load();
       await global.strapi.postListen();
-      console.log('Strapi 5 started successfully');
+      console.log('Strapi 5 ready');
     }
-    global.strapi.server.app.callback()(req, res);
+    
+    return global.strapi.server.app.callback()(req, res);
   } catch (error) {
-    console.error('Strapi startup error:', error);
-    res.status(500).json({
-      error: 'Strapi startup error',
+    console.error('Fatal Bridge Error:', error);
+    return res.status(500).json({
+      error: 'Strapi bridge error',
       message: error.message,
       stack: error.stack,
       availableKeys: Object.keys(strapiPkg)
