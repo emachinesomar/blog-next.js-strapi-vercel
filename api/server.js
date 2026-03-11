@@ -1,69 +1,45 @@
-const path = require('path');
-const strapiPkg = require('@strapi/strapi');
 const fs = require('fs');
-
-console.log('--- Vercel Request Received ---');
-
-const createStrapi = strapiPkg.createStrapi || (strapiPkg.default && strapiPkg.default.createStrapi) || (typeof strapiPkg === 'function' ? strapiPkg : null);
+const path = require('path');
 
 module.exports = async (req, res) => {
-  console.log('Method:', req.method, 'URL:', req.url);
+  // 1. Inmediata respuesta de diagnóstico para confirmar que el ruteo funciona
+  console.log('--- Bridge Invoked ---');
+  console.log('URL:', req.url);
   
+  const appDir = process.cwd();
+  
+  // Si solo quieres ver si funciona, descomenta la siguiente línea y haz push:
+  // return res.status(200).send("CONEXIÓN EXITOSA: El puente ha sido alcanzado.");
+
   try {
+    const strapiPkg = require('@strapi/strapi');
+    const createStrapi = strapiPkg.createStrapi || (strapiPkg.default && strapiPkg.default.createStrapi) || (typeof strapiPkg === 'function' ? strapiPkg : null);
+
     if (!global.strapi) {
-      console.log('Initializing Strapi 5 Engine...');
+      console.log('Iniciando Strapi...');
       
-      if (!createStrapi) {
-        throw new Error(`Could not find a valid Strapi initialization function. Available keys: ${Object.keys(strapiPkg).join(', ')}`);
-      }
-
-      // 1. Resolve Application Directory
-      let appDir = process.cwd();
-      // If deployed from root, we need to append backend
+      let finalAppDir = appDir;
       if (!fs.existsSync(path.join(appDir, 'package.json')) && fs.existsSync(path.join(appDir, 'backend'))) {
-        appDir = path.join(appDir, 'backend');
-      }
-      
-      console.log('Final AppDir:', appDir);
-      const files = fs.readdirSync(appDir);
-      console.log('Files present:', files.join(', '));
-      
-      // 2. Validate essential folders (dist is mandatory for Strapi 5)
-      if (!files.includes('dist')) {
-        throw new Error(`The "dist" folder is missing in ${appDir}. Did the build fail?`);
+        finalAppDir = path.join(appDir, 'backend');
       }
 
-      // 3. Initialize and Load Strapi
-      global.strapi = await createStrapi({ appDir }).load();
-      
-      // 4. Set up internal server callbacks
+      global.strapi = await createStrapi({ appDir: finalAppDir }).load();
       await global.strapi.postListen();
-      console.log('Strapi 5 is now ready and listening.');
     }
     
-    // Automatic redirect for root to admin
     if (req.url === '/' || req.url === '') {
-      console.log('Redirecting root to /admin');
       res.writeHead(302, { Location: '/admin' });
       return res.end();
     }
 
-    // Forward the request to Strapi's Koa application
-    const callback = global.strapi.server.app.callback();
-    return callback(req, res);
-
-  } catch (error) {
-    console.error('CRITICAL: Strapi Bridge Failure:', error);
+    return global.strapi.server.app.callback()(req, res);
+  } catch (err) {
     return res.status(500).json({
-      error: 'Strapi Bridge Error',
-      message: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-      diagnostics: {
-        cwd: process.cwd(),
-        url: req.url,
-        hasDist: fs.existsSync(path.join(process.cwd(), 'dist')) || fs.existsSync(path.join(process.cwd(), 'backend/dist')),
-        files: fs.readdirSync(process.cwd())
-      }
+      error: 'Error en el arranque de Strapi',
+      message: err.message,
+      path: req.url,
+      cwd: appDir,
+      files: fs.readdirSync(appDir)
     });
   }
 };
